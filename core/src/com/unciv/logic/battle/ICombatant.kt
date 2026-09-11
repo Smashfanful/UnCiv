@@ -1,24 +1,61 @@
 package com.unciv.logic.battle
 
-import com.unciv.logic.civilization.CivilizationInfo
-import com.unciv.logic.map.TileInfo
-import com.unciv.models.gamebasics.unit.UnitType
+import com.unciv.logic.civilization.Civilization
+import com.unciv.logic.map.tile.Tile
+import com.unciv.models.UncivSound
+import com.unciv.models.ruleset.unique.GameContext
+import com.unciv.models.ruleset.unique.Unique
+import com.unciv.models.ruleset.unique.UniqueType
+import com.unciv.models.ruleset.unit.UnitType
+import yairm210.purity.annotations.Readonly
 
-interface ICombatant{
-    fun getName(): String
-    fun getHealth():Int
-    fun getUnitType(): UnitType
-    fun getAttackingStrength(defender: ICombatant): Int
-    fun getDefendingStrength(attacker: ICombatant): Int
-    fun takeDamage(damage:Int)
-    fun isDefeated():Boolean
-    fun getCivilization(): CivilizationInfo
-    fun getTile(): TileInfo
 
-    fun isMelee(): Boolean {
-        return this.getUnitType().isMelee()
-    }
+interface ICombatant {
+    @Readonly fun getName(): String
+    @Readonly fun getHealth(): Int
+    @Readonly fun getMaxHealth(): Int
+    @Readonly fun getUnitType(): UnitType
+    @Readonly fun getAttackingStrength(defender: ICombatant? = null): Int
+    @Readonly fun getDefendingStrength(attacker: ICombatant? = null): Int
+    fun takeDamage(damage: Int)
+    @Readonly fun isDefeated(): Boolean
+    @Readonly fun getCivInfo(): Civilization
+    @Readonly fun getTile(): Tile
+    @Readonly fun isInvisible(to: Civilization): Boolean
+    @Readonly fun canAttack(): Boolean
+    /** Implements [UniqueParameterType.CombatantFilter][com.unciv.models.ruleset.unique.UniqueParameterType.CombatantFilter] */
+    @Readonly fun matchesFilter(filter: String, multiFilter: Boolean = true): Boolean
+    @Readonly fun getAttackSound(): UncivSound
+
+    @Readonly fun isMelee(): Boolean = !isRanged()
+    @Readonly 
     fun isRanged(): Boolean {
-        return this.getUnitType().isRanged()
+        if (this is CityCombatant) return true
+        return (this as MapUnitCombatant).unit.baseUnit.isRanged()
     }
+    @Readonly
+    fun isAirUnit(): Boolean {
+        if (this is CityCombatant) return false
+        return (this as MapUnitCombatant).unit.baseUnit.isAirUnit()
+    }
+    @Readonly
+    fun isWaterUnit(): Boolean {
+        if (this is CityCombatant) return false
+        return (this as MapUnitCombatant).unit.baseUnit.isWaterUnit
+    }
+    @Readonly
+    fun isLandUnit(): Boolean {
+        if (this is CityCombatant) return false
+        return (this as MapUnitCombatant).unit.baseUnit.isLandUnit
+    }
+    @Readonly fun isCity(): Boolean = this is CityCombatant
+    @Readonly fun isCivilian() = this is MapUnitCombatant && this.unit.isCivilian()
+    
+    @Readonly fun getTriggeredUniques(
+        trigger: UniqueType,
+        gameContext: GameContext,
+        triggerFilter: (Unique) -> Boolean = { true }
+    ): Sequence<Unique>
+
+    fun getNotificationDisplay(leadingText: String = ""): String = ""
 }
